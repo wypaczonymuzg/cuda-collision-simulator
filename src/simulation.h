@@ -22,6 +22,6 @@ extern "C" cudaError_t CUDA_MallocArray(uchar4 **h_Src, int imageW, int imageH);
 extern "C" cudaError_t CUDA_FreeArray();
 
 // CUDA kernel functions
-extern "C" void cuda_draw(TColor *d_dst,float* array, int imageW, int imageH,int num_of_bodies);
+
 extern "C" void cuda_calculate(float* array, int imageW, int imageH,int sh_size,float delta);
 #endif

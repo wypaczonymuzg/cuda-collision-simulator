@@ -41,19 +41,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: CUDACollisionSimulator
+all: cuda-collision-simulator
 
 # Tool invocations
-CUDACollisionSimulator: $(OBJS) $(USER_OBJS)
+cuda-collision-simulator: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: NVCC Linker'
-	/opt/cuda/bin/nvcc --cudart static -L"/opt/cuda/samples/common/lib/linux/x86_64" -link -o  "CUDACollisionSimulator" $(OBJS) $(USER_OBJS) $(LIBS)
+	/opt/cuda/bin/nvcc --cudart static -L"/opt/cuda/samples/common/lib/linux/x86_64" -link -o  "cuda-collision-simulator" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(CU_DEPS)$(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) CUDACollisionSimulator
+	-$(RM) $(CU_DEPS)$(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) cuda-collision-simulator
 	-@echo ' '
 
 .PHONY: all clean dependents

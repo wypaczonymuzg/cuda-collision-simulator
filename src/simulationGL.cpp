@@ -32,6 +32,11 @@ struct cudaGraphicsResource *cuda_pbo_resource; // handles OpenGL-CUDA exchange
 uchar4 *h_Src;
 int imageW = 1024, imageH = 768;
 GLuint shader;
+#define PI 3.1415926535897932384626433832795
+#define HEIGHT 768
+#define WIDTH 1024
+
+
 
 int sh_size;
 int num_of_bodies;
@@ -100,8 +105,8 @@ void computeFPS() {
 	if (fpsCount == fpsLimit) {
 		char fps[256];
 		float ifps = 1.f / (sdkGetAverageTimerValue(&timer) / 1000.f);
-		delta = sdkGetAverageTimerValue(&timer)/1000;
-		sprintf(fps, "Sim: %3.1f fps \t delta :%f ", ifps,delta);
+		delta = sdkGetAverageTimerValue(&timer) / 1000;
+		sprintf(fps, "Sim: %3.1f fps \t delta :%f ", ifps, delta);
 
 		glutSetWindowTitle(fps);
 		fpsCount = 0;
@@ -111,19 +116,18 @@ void computeFPS() {
 	}
 }
 
-void runSimulation(TColor *d_dst) {
+void runSimulation(float* d_array) {
 	switch (g_Kernel) {
 	case 0:
 		break;
 	case 1:
 
-		cuda_draw(d_dst, d_array, imageW, imageH, num_of_bodies);
+		//cuda_draw(d_dst, d_array, imageW, imageH, num_of_bodies);
 
 		//printf("cuda_calculate delta : %f\n",delta);
-		cuda_calculate(d_array, imageW, imageH, num_of_bodies,delta);
+		cuda_calculate(d_array, imageW, imageH, num_of_bodies, delta);
 
 		//printf("cuda_draw\n");
-
 
 		break;
 	}
@@ -134,47 +138,78 @@ void runSimulation(TColor *d_dst) {
 void displayFunc(void) {
 
 	sdkStartTimer(&timer);
-	TColor *d_dst = NULL;
+	//TColor *d_dst = NULL;
 	size_t num_bytes;
 
 	if (frameCounter++ == 0) {
 		sdkResetTimer(&timer);
 	}
 
-	// DEPRECATED:
-	//checkCudaErrors(cudaGLMapBufferObject((void**)&d_dst, gl_PBO));
-	checkCudaErrors(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
-	getLastCudaError("cudaGraphicsMapResources failed");
+	runSimulation(d_array);
+
 	checkCudaErrors(
-			cudaGraphicsResourceGetMappedPointer((void ** ) &d_dst, &num_bytes,
-					cuda_pbo_resource));
-	getLastCudaError("cudaGraphicsResourceGetMappedPointer failed");
+					cudaMemcpy(h_array, d_array, sh_size, cudaMemcpyDeviceToHost));
 
-	checkCudaErrors(CUDA_Bind2TextureArray());
-
-	runSimulation(d_dst);
-
-	checkCudaErrors(CUDA_UnbindTexture());
-// DEPRECATED: checkCudaErrors(cudaGLUnmapBufferObject(gl_PBO));
-	checkCudaErrors(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
-
-// Common display code path
 	{
-		glClear(GL_COLOR_BUFFER_BIT);
+	 glClear(GL_COLOR_BUFFER_BIT);
 
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imageW, imageH, GL_RGBA,
-				GL_UNSIGNED_BYTE, BUFFER_DATA(0));
-		glBegin(GL_TRIANGLES);
-		glTexCoord2f(0, 0);
-		glVertex2f(-1, -1);
-		glTexCoord2f(2, 0);
-		glVertex2f(+3, -1);
-		glTexCoord2f(0, 2);
-		glVertex2f(-1, +3);
+	 glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imageW, imageH, GL_RGBA,
+	 GL_UNSIGNED_BYTE, BUFFER_DATA(0));
+	 glBegin(GL_TRIANGLES);
+	 glTexCoord2f(0, 0);
+	 glVertex2f(-1, -1);
+	 glTexCoord2f(2, 0);
+	 glVertex2f(+3, -1);
+	 glTexCoord2f(0, 2);
+	 glVertex2f(-1, +3);
+	 glEnd();
+	 glFinish();
+	 }
+
+	float static radius = 0.01;
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glPushMatrix();
+
+	//Tells the camera where to be and where to look
+	//Format (camera position x,y,z, focal point x,y,z, camera orientation x,y,z)
+	//Remember that by default the camera points toward negative Z
+	gluLookAt(0.0, 0.0, 1000.0, 0.0, 0.0, 100.0, 0.0, 1.0, 0.0);
+
+	glPushMatrix();
+
+	//Set Drawing Color - Will Remain this color until otherwise specified
+	glColor3f(0.0, 0.0, 0.0);  //Some type of blue
+
+	//Draw Circle
+	glBegin(GL_POLYGON);
+	//Change the 6 to 12 to increase the steps (number of drawn points) for a smoother circle
+	//Note that anything above 24 will have little affect on the circles appearance
+	//Play with the numbers till you find the result you are looking for
+	//Value 1.5 - Draws Triangle
+	//Value 2 - Draws Square
+	//Value 3 - Draws Hexagon
+	//Value 4 - Draws Octagon
+	//Value 5 - Draws Decagon
+	//Notice the correlation between the value and the number of sides
+	//The number of sides is always twice the value given this range
+
+	//printf("drawing x : %f y : %f r : %f\n",h_array[0],h_array[1],h_array[4]);
+	for (int i = 0; i < num_of_bodies*6; i=i+6) {
+		glBegin(GL_POLYGON);
+		for (double j = 0; j < 2 * PI; j += PI / 12) //<-- Change this Value
+			glVertex3f((GLfloat)(h_array[i]+cos(j) * h_array[i+4]),(GLfloat)(h_array[i+1]+sin(j)* h_array[i+4]), 0.0);
 		glEnd();
-		glFinish();
 	}
 
+	//Draw Circle
+
+	glPopMatrix();
+
+	glPopMatrix();
+
+	glFlush();
 	if (frameCounter == frameN) {
 		frameCounter = 0;
 
@@ -320,6 +355,44 @@ float RandomFloat(float a, float b) {
 	return a + r;
 }
 
+void init() {
+	//Tells OpenGL to check which objects are in front of other objects
+	//Otherwise OpenGL would draw the last object in front regardless
+	//of it's position in Z space
+	//Note: It is not necessary to enable this for a simple 2D circle
+	//but is good practice
+	glEnable(GL_DEPTH_TEST);
+
+	//Tells OpenGL not to draw backfaces
+	//Backfaces are defined by vertex drawing order
+	//By default couter-clockwise drawing order specifies front faces
+	//Note: The circle is drawn counter-clockwise
+	//Note: It is not necessary to enable this for a simple 2D circle
+	//but is good practice
+	glCullFace(GL_BACK);
+	glEnable(GL_CULL_FACE);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(45.0f, (GLfloat) WIDTH / (GLfloat) HEIGHT, 0.1f, 100000.0f);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	//Assign the clear screen color
+	//Format (Red, Green, Blue, Alpha)
+	//Values should remain normalized between 0 and 1
+	glClearColor(1.0, 1.0, 1.0, 0.0);
+}
+
+void reshape(int w, int h) {
+	glViewport(0, 0, (GLsizei) WIDTH, (GLsizei) HEIGHT);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(45.0f, (GLfloat) WIDTH / (GLfloat) HEIGHT, 0.1f, 100000.0f);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+}
+
 int main(int argc, char **argv) {
 
 	char *dump_file = NULL;
@@ -339,7 +412,7 @@ int main(int argc, char **argv) {
 	//scanf("%d", &n);
 	switch (n) {
 	case 1:
-		num_of_bodies = 64;
+		num_of_bodies = 512;
 
 		float temp;
 
@@ -352,13 +425,13 @@ int main(int argc, char **argv) {
 		for (int i = 0; i < num_of_bodies * 6; i += 6) {
 			h_array[i] = RandomFloat(0, imageW); 		//x
 			h_array[i + 1] = RandomFloat(0, imageH); 	//y
-			h_array[i + 2] = RandomFloat(-101, 101);		//vx
-			h_array[i + 3] = RandomFloat(-101, 101);		//vy
-			h_array[i + 4] = RandomFloat(4, 9); 		//radius
-			h_array[i + 5] = h_array[i + 4];	// mass
+			h_array[i + 2] = RandomFloat(-50, 50);		//vx
+			h_array[i + 3] = RandomFloat(-50, 50);		//vy
+			h_array[i + 4] = RandomFloat(1,10); 		//radius
+			h_array[i + 5] = h_array[4];	// mass
 			printf(
 					"i : %d\t x : %f\t y : %f\t vx : %f\t vy : %f\t : rad : %f\t mass : %f\n",
-					i/6, h_array[i], h_array[i + 1], h_array[i + 2],
+					i / 6, h_array[i], h_array[i + 1], h_array[i + 2],
 					h_array[i + 3], h_array[i + 4], h_array[i + 5]);
 		}
 
@@ -370,6 +443,8 @@ int main(int argc, char **argv) {
 	}
 
 	initGL(&argc, argv);
+	init();
+	glutReshapeFunc(reshape);
 	cudaGLSetGLDevice(gpuGetMaxGflopsDeviceId());
 
 	h_Src = (uchar4*) malloc(imageH * imageW * 4);
