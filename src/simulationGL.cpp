@@ -412,7 +412,7 @@ int main(int argc, char **argv) {
 	//scanf("%d", &n);
 	switch (n) {
 	case 1:
-		num_of_bodies = 512;
+		num_of_bodies = 64;
 
 		float temp;
 
@@ -427,7 +427,7 @@ int main(int argc, char **argv) {
 			h_array[i + 1] = RandomFloat(0, imageH); 	//y
 			h_array[i + 2] = RandomFloat(-50, 50);		//vx
 			h_array[i + 3] = RandomFloat(-50, 50);		//vy
-			h_array[i + 4] = RandomFloat(1,10); 		//radius
+			h_array[i + 4] = RandomFloat(5,10); 		//radius
 			h_array[i + 5] = h_array[4];	// mass
 			printf(
 					"i : %d\t x : %f\t y : %f\t vx : %f\t vy : %f\t : rad : %f\t mass : %f\n",
