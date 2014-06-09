@@ -193,7 +193,7 @@ void displayFunc(void) {
 	//Tells the camera where to be and where to look
 	//Format (camera position x,y,z, focal point x,y,z, camera orientation x,y,z)
 	//Remember that by default the camera points toward negative Z
-	gluLookAt(0.0, 0.0, 2000.0, 0.0, 0.0, 100.0, 0.0, 1.0, 0.0);
+	gluLookAt(512.0, 384.0, 1100.0, 0.0, 0.0, 100.0, 0.0, 1.0, 0.0);
 
 	glPushMatrix();
 
