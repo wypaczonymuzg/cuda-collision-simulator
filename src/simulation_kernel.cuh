@@ -41,13 +41,13 @@ __global__ void calculate(float* array, int imageW, int imageH, int size,
 					* (myPosition[5] - sh_memory[idx + 5])
 					+ (2 * sh_memory[idx + 5] * sh_memory[idx + 2]))
 					/ (myPosition[5] + sh_memory[idx + 5]);
-			myPosition[0] = myPosition[0] + myPosition[2];
+
 
 			myPosition[3] = (myPosition[3]
 					* (myPosition[5] - sh_memory[idx + 5])
 					+ (2 * sh_memory[idx + 5] * sh_memory[idx + 3]))
 					/ (myPosition[5] + sh_memory[idx + 5]);
-			myPosition[1] = myPosition[1] + myPosition[3];
+
 		}
 		__syncthreads();
 	}
