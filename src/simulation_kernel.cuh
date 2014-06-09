@@ -100,8 +100,8 @@ __global__ void calculate(float* array, int imageW, int imageH, int size,
 
 	 return true;
 	 */
-	float movex = myPosition[2]*delta;
-	float movey =myPosition[3]*delta;
+	float movex =myPosition[2] * delta;
+	float movey = myPosition[3] * delta;
 
 	for (int i = 0; i < size * 6; i += 6) {
 		int idx = i;
@@ -151,14 +151,20 @@ __global__ void calculate(float* array, int imageW, int imageH, int size,
 		if (mag < dist)
 			continue;
 
-		float mvlen = sqrt(mvx*mvx+mvy*mvy);
-		float nmvx = mvx/mvlen;
-		float nmvy = mvy/mvlen;
+		float mvlen = sqrt(mvx * mvx + mvy * mvy);
+		float nmvx = mvx / mvlen;
+		float nmvy = mvy / mvlen;
 
-		movex = nmvx *dist;
-		movey = nmvy *dist;
+		movex = 0;//movex = nmvx * dist;
+		movey = 0;;//movey = nmvy * dist;
 
+		myPosition[2] = (myPosition[2] * (myPosition[5] - sh_memory[idx + 5])
+				+ (2 * sh_memory[idx + 5] * sh_memory[idx + 2]))
+				/ (myPosition[5] + sh_memory[idx + 5]);
 
+		myPosition[3] = (myPosition[3] * (myPosition[5] - sh_memory[idx + 5])
+				+ (2 * sh_memory[idx + 5] * sh_memory[idx + 3]))
+				/ (myPosition[5] + sh_memory[idx + 5]);
 
 		__syncthreads();
 	}
