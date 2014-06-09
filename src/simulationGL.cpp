@@ -412,7 +412,7 @@ int main(int argc, char **argv) {
 	//scanf("%d", &n);
 	switch (n) {
 	case 1:
-		num_of_bodies = 512;
+		num_of_bodies = 64;
 
 		float temp;
 
