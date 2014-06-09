@@ -36,12 +36,10 @@ GLuint shader;
 #define HEIGHT 768
 #define WIDTH 1024
 
-
-
 int sh_size;
 int num_of_bodies;
-float* h_array;
-float* d_array;
+Circle** h_array;
+Circle** d_array;
 float delta;
 //int zal = 0;
 
@@ -116,7 +114,7 @@ void computeFPS() {
 	}
 }
 
-void runSimulation(float* d_array) {
+void runSimulation(Circle** d_array) {
 	switch (g_Kernel) {
 	case 0:
 		break;
@@ -125,6 +123,7 @@ void runSimulation(float* d_array) {
 		//cuda_draw(d_dst, d_array, imageW, imageH, num_of_bodies);
 
 		//printf("cuda_calculate delta : %f\n",delta);
+
 		cuda_calculate(d_array, imageW, imageH, num_of_bodies, delta);
 
 		//printf("cuda_draw\n");
@@ -137,6 +136,7 @@ void runSimulation(float* d_array) {
 
 void displayFunc(void) {
 
+
 	sdkStartTimer(&timer);
 	//TColor *d_dst = NULL;
 	size_t num_bytes;
@@ -146,25 +146,43 @@ void displayFunc(void) {
 	}
 
 	runSimulation(d_array);
+	printf("copying\n");
 
+	Circle** hn_array;
+	hn_array = new Circle*[num_of_bodies];
 	checkCudaErrors(
-					cudaMemcpy(h_array, d_array, sh_size, cudaMemcpyDeviceToHost));
-
+			cudaMemcpy(h_array, d_array, sizeof(Circle) * num_of_bodies,
+					cudaMemcpyDeviceToHost));
+	/*
+	for (int i = 0; i < num_of_bodies; i++) {
+		printf(
+				"i : %d\t x : %f\t y : %f\t vx : %f\t vy : %f\t : rad : %f\t mass : %f\n",
+				i, hn_array[i]->x, hn_array[i]->y, hn_array[i]->velocity.x,
+				hn_array[i]->velocity.y, hn_array[i]->radius,
+				hn_array[i]->mass);
+	}
+	 */
+	/*
+	 checkCudaErrors(
+	 cudaMemcpy(h_array, d_array, num_of_bodies * sizeof(Circle),
+	 cudaMemcpyDeviceToHost));
+	 */
+	printf("copied succesfully\n");
 	{
-	 glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-	 glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imageW, imageH, GL_RGBA,
-	 GL_UNSIGNED_BYTE, BUFFER_DATA(0));
-	 glBegin(GL_TRIANGLES);
-	 glTexCoord2f(0, 0);
-	 glVertex2f(-1, -1);
-	 glTexCoord2f(2, 0);
-	 glVertex2f(+3, -1);
-	 glTexCoord2f(0, 2);
-	 glVertex2f(-1, +3);
-	 glEnd();
-	 glFinish();
-	 }
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imageW, imageH, GL_RGBA,
+				GL_UNSIGNED_BYTE, BUFFER_DATA(0));
+		glBegin(GL_TRIANGLES);
+		glTexCoord2f(0, 0);
+		glVertex2f(-1, -1);
+		glTexCoord2f(2, 0);
+		glVertex2f(+3, -1);
+		glTexCoord2f(0, 2);
+		glVertex2f(-1, +3);
+		glEnd();
+		glFinish();
+	}
 
 	float static radius = 0.01;
 
@@ -196,11 +214,14 @@ void displayFunc(void) {
 	//The number of sides is always twice the value given this range
 
 	//printf("drawing x : %f y : %f r : %f\n",h_array[0],h_array[1],h_array[4]);
-	for (int i = 0; i < num_of_bodies*6; i=i+6) {
+	for (int i = 0; i < num_of_bodies; i++) {
 		glBegin(GL_POLYGON);
 		for (double j = 0; j < 2 * PI; j += PI / 12) //<-- Change this Value
-			glVertex3f((GLfloat)(h_array[i]+cos(j) * h_array[i+4]),(GLfloat)(h_array[i+1]+sin(j)* h_array[i+4]), 0.0);
+			glVertex3f((GLfloat) (h_array[i]->x + cos(j) * h_array[i]->radius),
+					(GLfloat) (h_array[i]->y + sin(j) * h_array[i]->radius),
+					0.0);
 		glEnd();
+
 	}
 
 	//Draw Circle
@@ -412,27 +433,38 @@ int main(int argc, char **argv) {
 	//scanf("%d", &n);
 	switch (n) {
 	case 1:
-		num_of_bodies = 128;
+		num_of_bodies = 32;
 
 		float temp;
 
-		sh_size = sizeof(float) * num_of_bodies * 6;
+		sh_size = sizeof(Circle) * num_of_bodies;
 
 		printf("number of bodies = %d \t sh_size = %d \n", num_of_bodies,
-				sh_size * sizeof(float));
-		h_array = (float*) malloc(sh_size);
+				sh_size);
+		h_array = new Circle*[num_of_bodies];
+		Vector *vec;
+		for (int i = 0; i < num_of_bodies; i++) {
+			float x = RandomFloat(0, imageW); 		//x
+			float y = RandomFloat(0, imageH); 	//y
+			vec =new Vector(RandomFloat(-50, 50), RandomFloat(-50, 50));
+			float radius = RandomFloat(5, 5); 		//radius
+			float mass = radius;	// mass
+			//Circle temp(x, y, &vec, radius, mass);
+			h_array[i] = new Circle(x, y, *vec, radius, mass);
 
-		for (int i = 0; i < num_of_bodies * 6; i += 6) {
-			h_array[i] = RandomFloat(0, imageW); 		//x
-			h_array[i + 1] = RandomFloat(0, imageH); 	//y
-			h_array[i + 2] = RandomFloat(-50, 50);		//vx
-			h_array[i + 3] = RandomFloat(-50, 50);		//vy
-			h_array[i + 4] = RandomFloat(5,5); 		//radius
-			h_array[i + 5] = h_array[4];	// mass
+			/*
+			 printf(
+			 "i : %d\t x : %f\t y : %f\t vx : %f\t vy : %f\t : rad : %f\t mass : %f\n",
+			 i , h_array[i]->x, h_array[i]->y, h_array[i]->velocity.x,
+			 h_array[i]->velocity.y, h_array[i]->radius, h_array[i]->mass);
+			 */
+		}
+		for (int i = 0; i < num_of_bodies; i++) {
 			printf(
 					"i : %d\t x : %f\t y : %f\t vx : %f\t vy : %f\t : rad : %f\t mass : %f\n",
-					i / 6, h_array[i], h_array[i + 1], h_array[i + 2],
-					h_array[i + 3], h_array[i + 4], h_array[i + 5]);
+					i, h_array[i]->x, h_array[i]->y, h_array[i]->velocity.x,
+					h_array[i]->velocity.y, h_array[i]->radius,
+					h_array[i]->mass);
 		}
 
 		g_Kernel = 1;
@@ -447,21 +479,37 @@ int main(int argc, char **argv) {
 	glutReshapeFunc(reshape);
 	cudaGLSetGLDevice(gpuGetMaxGflopsDeviceId());
 
-	h_Src = (uchar4*) malloc(imageH * imageW * 4);
-	memset(h_Src, clearColorbit, imageH * imageW * 4);
+	//h_Src = (uchar4*) malloc(imageH * imageW * 4);
+	//memset(h_Src, clearColorbit, imageH * imageW * 4);
 
-	checkCudaErrors(CUDA_MallocArray(&h_Src, imageW, imageH));
+	//checkCudaErrors(CUDA_MallocArray(&h_Src, imageW, imageH));
 
 	//copying to device memory
 
 	initOpenGLBuffers();
 
 	if (g_Kernel != 0) {
-		checkCudaErrors(cudaMalloc((void** ) &d_array, sh_size));
 		checkCudaErrors(
-				cudaMemcpy(d_array, h_array, sh_size, cudaMemcpyHostToDevice));
+				cudaMalloc((void** ) &d_array, num_of_bodies * sizeof(Circle)));
+		checkCudaErrors(
+				cudaMemcpy(d_array, h_array, sizeof(Circle) * num_of_bodies,
+						cudaMemcpyHostToDevice));
+		Circle** hn_array;
+		hn_array = new Circle*[num_of_bodies];
+		checkCudaErrors(
+				cudaMemcpy(hn_array, d_array, sizeof(Circle) * num_of_bodies,
+						cudaMemcpyDeviceToHost));
+
+		for (int i = 0; i < num_of_bodies; i++) {
+			printf(
+					"i : %d\t x : %f\t y : %f\t vx : %f\t vy : %f\t : rad : %f\t mass : %f\n",
+					i, hn_array[i]->x, hn_array[i]->y, hn_array[i]->velocity.x,
+					hn_array[i]->velocity.y, hn_array[i]->radius,
+					hn_array[i]->mass);
+		}
 
 		printf("Starting GLUT main loop...\n");
+
 
 		glutDisplayFunc(displayFunc);
 		glutKeyboardFunc(shutDown);
@@ -482,3 +530,4 @@ int main(int argc, char **argv) {
 		exit(EXIT_SUCCESS);
 	}
 }
+
